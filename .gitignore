@@ -1,0 +1,24 @@
+# Environment variables
+.env
+node_modules/
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Testing
+coverage/

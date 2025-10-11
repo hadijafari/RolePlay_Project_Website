@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Realtime Voice Agent</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Voice Agent</h1>
+            <p class="subtitle">Powered by OpenAI Realtime API</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Status indicator -->
+            <div class="status-bar">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text" id="statusText">Disconnected</span>
+                </div>
+                <div class="model-info" id="modelInfo">gpt-4o-realtime-preview</div>
+            </div>
+
+            <!-- Conversation display -->
+            <div class="conversation-container">
+                <div class="conversation-box" id="conversationBox">
+                    <div class="welcome-message">
+                        <h2>👋 Welcome!</h2>
+                        <p>Click the "Connect" button below to start your voice conversation with the AI agent.</p>
+                        <p>Make sure you have your microphone enabled.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio visualizer -->
+            <div class="audio-visualizer">
+                <canvas id="visualizer" width="800" height="100"></canvas>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button class="btn btn-primary" id="connectBtn">
+                    <span class="btn-icon">🔌</span>
+                    <span class="btn-text">Connect</span>
+                </button>
+                <button class="btn btn-danger" id="disconnectBtn" disabled>
+                    <span class="btn-icon">⏹️</span>
+                    <span class="btn-text">Disconnect</span>
+                </button>
+                <button class="btn btn-secondary" id="clearBtn">
+                    <span class="btn-icon">🗑️</span>
+                    <span class="btn-text">Clear Chat</span>
+                </button>
+            </div>
+
+            <!-- Settings panel -->
+            <div class="settings-panel">
+                <button class="settings-toggle" id="settingsToggle">⚙️ Settings</button>
+                <div class="settings-content" id="settingsContent">
+                    <div class="setting-group">
+                        <label for="apiKeyInput">OpenAI API Key:</label>
+                        <input type="password" id="apiKeyInput" placeholder="Loaded from .env file">
+                        <small>✅ API key is automatically loaded from .env file. You can also manually enter a key here as a fallback.</small>
+                    </div>
+                    <div class="setting-group">
+                        <label for="voiceSelect">Agent Voice:</label>
+                        <select id="voiceSelect">
+                            <option value="alloy">Alloy</option>
+                            <option value="echo">Echo</option>
+                            <option value="shimmer">Shimmer</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="instructionsInput">System Instructions:</label>
+                        <textarea id="instructionsInput" rows="3" placeholder="You are a helpful assistant...">You are a helpful and friendly AI assistant. Be conversational and engaging.</textarea>
+                    </div>
+                    <div class="setting-group">
+                        <label>
+                            <input type="checkbox" id="agentStartsCheckbox" checked>
+                            Agent starts conversation first
+                        </label>
+                        <small>When enabled, the agent will greet you and initiate the conversation</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Built with OpenAI Realtime API | <a href="https://platform.openai.com/docs/guides/realtime" target="_blank">Documentation</a></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
