@@ -196,6 +196,9 @@ class RealtimeVoiceAgent {
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
                 
+                // Extract questions and update system instructions
+                this.updateSystemInstructionsWithQuestions(data);
+                
                 // Re-enable button
                 this.generatePlanBtn.disabled = false;
                 this.generatePlanBtn.innerHTML = '<span class="btn-icon">📋</span><span class="btn-text">Generate Interview Plan</span>';
@@ -236,13 +239,78 @@ class RealtimeVoiceAgent {
         this.currentSessionId = null;
     }
     
+    updateSystemInstructionsWithQuestions(data) {
+        try {
+            // Extract interview sections from the response
+            const interviewSections = data.result?.interview_plan?.interview_sections;
+            
+            if (!interviewSections || !Array.isArray(interviewSections)) {
+                console.warn('No interview sections found in response');
+                return;
+            }
+            
+            // Extract all questions from all sections
+            let allQuestions = [];
+            let questionNumber = 1;
+            
+            interviewSections.forEach(section => {
+                if (section.questions && Array.isArray(section.questions)) {
+                    section.questions.forEach(q => {
+                        if (q.question_text) {
+                            allQuestions.push(`${questionNumber}. ${q.question_text}`);
+                            questionNumber++;
+                        }
+                    });
+                }
+            });
+            
+            // Build the numbered questions string
+            const numberedQuestions = allQuestions.join('\n');
+            
+            // Create the new system instructions
+            const newInstructions = `You are conducting a natural interview conversation. 
+When the conversation starts, immediately greet the user by saying exactly: "Hello! Welcome to your interview. I'm excited to learn more about your background. Could you please introduce yourself and tell me a bit about your experience?" 
+
+After greeting, wait for the user to speak and when the user is finished, you need to ask these questions in this exact order, but make it sound like a normal conversation:
+
+${numberedQuestions}
+
+CRITICAL INSTRUCTIONS:
+- The agent will say the initial message and asks that the interviewee introduces himself.
+- After the interviewee introduces himself, the agent will respond in one or 2 sentence and then asks the first question.
+- Ask these questions in the exact order listed above
+- Make it sound like a natural conversation - don't say question numbers or "first question", "second question", etc.
+- After each answer, provide brief constructive feedback (1-2 sentences) when the answer could be improved or when clarification would be helpful
+- If the answer is good and complete, simply acknowledge it briefly and move to the next question without excessive praise
+- Be encouraging and supportive, but focus on helping the interviewee improve rather than just praising
+- Do NOT ask follow-up questions or elaborations
+- Do NOT skip questions or ask them out of order
+- Do NOT create your own questions
+- Keep the conversation flowing naturally
+- Start with the first question from the questions list and if no question is available, ask this: 'Tell me about your experience and background.'
+
+You are a friendly, professional interviewer conducting a comprehensive interview to assess the candidate's technical skills, experience, and cultural fit for the role.`;
+            
+            // Update the textarea
+            this.instructionsInput.value = newInstructions;
+            
+            // Save to localStorage
+            this.saveSettings();
+            
+            console.log(`✅ System instructions updated with ${allQuestions.length} questions`);
+            
+        } catch (error) {
+            console.error('Error updating system instructions:', error);
+        }
+    }
+    
     toggleSettings() {
         this.settingsContent.classList.toggle('open');
     }
     
     loadSettings() {
         const voice = localStorage.getItem('voice_setting') || 'alloy';
-        const instructions = localStorage.getItem('system_instructions') || 'You are a helpful and friendly AI assistant. Be conversational and engaging.';
+        const instructions = localStorage.getItem('system_instructions') || 'Your name is "goozoo" and you should always start the conversation by introducing yourself.';
         const agentStarts = localStorage.getItem('agent_starts_conversation');
         
         this.voiceSelect.value = voice;
