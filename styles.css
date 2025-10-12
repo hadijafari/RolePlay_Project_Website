@@ -71,6 +71,129 @@ body {
     margin-bottom: 20px;
 }
 
+/* Upload Section Styles */
+.upload-section {
+    background: var(--bg-lighter);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.upload-title {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.upload-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.upload-box {
+    background: var(--bg-dark);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.upload-box:hover {
+    border-color: var(--primary-color);
+    background: rgba(16, 163, 127, 0.05);
+}
+
+.upload-label {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+}
+
+.upload-text {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.upload-text strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.upload-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.upload-file-info {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg-lighter);
+    border-radius: 6px;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    display: none;
+}
+
+.upload-file-info.active {
+    display: block;
+}
+
+.upload-file-info .file-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.upload-file-info .file-size {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.upload-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.plan-response {
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    display: none;
+}
+
+.plan-response.active {
+    display: block;
+}
+
+.plan-response pre {
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+}
+
+.plan-response .response-title {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
 .status-indicator {
     display: flex;
     align-items: center;
@@ -383,6 +506,10 @@ body {
 
     .main-content {
         padding: 20px;
+    }
+
+    .upload-container {
+        grid-template-columns: 1fr;
     }
 
     .conversation-container {

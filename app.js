@@ -18,13 +18,28 @@ class RealtimeVoiceAgent {
         this.connectBtn = document.getElementById('connectBtn');
         this.disconnectBtn = document.getElementById('disconnectBtn');
         this.clearBtn = document.getElementById('clearBtn');
-        this.apiKeyInput = document.getElementById('apiKeyInput');
         this.voiceSelect = document.getElementById('voiceSelect');
         this.instructionsInput = document.getElementById('instructionsInput');
         this.agentStartsCheckbox = document.getElementById('agentStartsCheckbox');
         this.settingsToggle = document.getElementById('settingsToggle');
         this.settingsContent = document.getElementById('settingsContent');
         this.visualizer = document.getElementById('visualizer');
+        
+        // Upload elements
+        this.resumeUpload = document.getElementById('resumeUpload');
+        this.jobDescUpload = document.getElementById('jobDescUpload');
+        this.resumeFileInfo = document.getElementById('resumeFileInfo');
+        this.jobDescFileInfo = document.getElementById('jobDescFileInfo');
+        this.generatePlanBtn = document.getElementById('generatePlanBtn');
+        this.planResponse = document.getElementById('planResponse');
+        
+        // Store uploaded files
+        this.resumeFile = null;
+        this.jobDescFile = null;
+        
+        // Polling variables
+        this.pollingInterval = null;
+        this.currentSessionId = null;
         
         // Audio visualization
         this.canvasContext = this.visualizer.getContext('2d');
@@ -43,10 +58,182 @@ class RealtimeVoiceAgent {
         this.settingsToggle.addEventListener('click', () => this.toggleSettings());
         
         // Save settings on change
-        this.apiKeyInput.addEventListener('change', () => this.saveSettings());
         this.voiceSelect.addEventListener('change', () => this.saveSettings());
         this.instructionsInput.addEventListener('change', () => this.saveSettings());
         this.agentStartsCheckbox.addEventListener('change', () => this.saveSettings());
+        
+        // File upload listeners
+        this.resumeUpload.addEventListener('change', (e) => this.handleFileSelect(e, 'resume'));
+        this.jobDescUpload.addEventListener('change', (e) => this.handleFileSelect(e, 'jobDesc'));
+        
+        // Generate plan button listener
+        this.generatePlanBtn.addEventListener('click', () => this.generateInterviewPlan());
+    }
+    
+    handleFileSelect(event, type) {
+        const file = event.target.files[0];
+        const fileInfoElement = type === 'resume' ? this.resumeFileInfo : this.jobDescFileInfo;
+        
+        if (file) {
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toUpperCase();
+            
+            // Store the file
+            if (type === 'resume') {
+                this.resumeFile = file;
+            } else {
+                this.jobDescFile = file;
+            }
+            
+            fileInfoElement.innerHTML = `
+                <div class="file-name">📎 ${fileName}</div>
+                <div class="file-size">${fileExtension} file</div>
+            `;
+            fileInfoElement.classList.add('active');
+        } else {
+            fileInfoElement.classList.remove('active');
+            
+            // Clear stored file
+            if (type === 'resume') {
+                this.resumeFile = null;
+            } else {
+                this.jobDescFile = null;
+            }
+        }
+    }
+    
+    async generateInterviewPlan() {
+        // Validate files are uploaded
+        if (!this.resumeFile || !this.jobDescFile) {
+            alert('Please upload both Resume and Job Description files before generating the plan.');
+            return;
+        }
+        
+        try {
+            // Disable button and show loading
+            this.generatePlanBtn.disabled = true;
+            this.generatePlanBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Generating...</span>';
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('resume', this.resumeFile);
+            formData.append('job_description', this.jobDescFile);
+            
+            // Send API request
+            const response = await fetch('https://roleplay-project.onrender.com/create-interview-plan', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            // Display initial response
+            this.planResponse.innerHTML = `
+                <div class="response-title">🔄 Processing...</div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            this.planResponse.classList.add('active');
+            
+            // Store session_id and start polling
+            if (data.session_id) {
+                this.currentSessionId = data.session_id;
+                this.startPolling();
+            } else {
+                throw new Error('No session_id received from server');
+            }
+            
+        } catch (error) {
+            console.error('Error generating interview plan:', error);
+            
+            // Show error
+            this.planResponse.innerHTML = `
+                <div class="response-title">❌ Error:</div>
+                <pre>${error.message}</pre>
+            `;
+            this.planResponse.classList.add('active');
+            
+            // Re-enable button
+            this.generatePlanBtn.disabled = false;
+            this.generatePlanBtn.innerHTML = '<span class="btn-icon">📋</span><span class="btn-text">Generate Interview Plan</span>';
+            
+            alert('Failed to generate interview plan: ' + error.message);
+        }
+    }
+    
+    startPolling() {
+        // Clear any existing polling interval
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+        }
+        
+        // Poll every 5 seconds
+        this.pollingInterval = setInterval(() => {
+            this.checkStatus();
+        }, 5000);
+        
+        // Also check immediately
+        this.checkStatus();
+    }
+    
+    async checkStatus() {
+        if (!this.currentSessionId) {
+            this.stopPolling();
+            return;
+        }
+        
+        try {
+            const response = await fetch(`https://roleplay-project.onrender.com/status/${this.currentSessionId}`);
+            const data = await response.json();
+            
+            // Check if completed
+            if (data.overall_status === 'completed') {
+                // Stop polling
+                this.stopPolling();
+                
+                // Display final interview plan
+                this.planResponse.innerHTML = `
+                    <div class="response-title">✅ Interview Plan Generated Successfully!</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Re-enable button
+                this.generatePlanBtn.disabled = false;
+                this.generatePlanBtn.innerHTML = '<span class="btn-icon">📋</span><span class="btn-text">Generate Interview Plan</span>';
+                
+            } else if (data.overall_status === 'error' || data.error) {
+                // Stop polling on error
+                this.stopPolling();
+                
+                // Display error
+                this.planResponse.innerHTML = `
+                    <div class="response-title">❌ Error During Processing:</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Re-enable button
+                this.generatePlanBtn.disabled = false;
+                this.generatePlanBtn.innerHTML = '<span class="btn-icon">📋</span><span class="btn-text">Generate Interview Plan</span>';
+                
+            } else {
+                // Still processing - update display
+                this.planResponse.innerHTML = `
+                    <div class="response-title">🔄 Processing... (Status: ${data.overall_status})</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Error checking status:', error);
+            // Don't stop polling on network errors, might be temporary
+        }
+    }
+    
+    stopPolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        this.currentSessionId = null;
     }
     
     toggleSettings() {
@@ -54,19 +241,16 @@ class RealtimeVoiceAgent {
     }
     
     loadSettings() {
-        const apiKey = localStorage.getItem('openai_api_key');
         const voice = localStorage.getItem('voice_setting') || 'alloy';
         const instructions = localStorage.getItem('system_instructions') || 'You are a helpful and friendly AI assistant. Be conversational and engaging.';
         const agentStarts = localStorage.getItem('agent_starts_conversation');
         
-        if (apiKey) this.apiKeyInput.value = apiKey;
         this.voiceSelect.value = voice;
         this.instructionsInput.value = instructions;
         this.agentStartsCheckbox.checked = agentStarts !== 'false'; // Default to true
     }
     
     saveSettings() {
-        localStorage.setItem('openai_api_key', this.apiKeyInput.value);
         localStorage.setItem('voice_setting', this.voiceSelect.value);
         localStorage.setItem('system_instructions', this.instructionsInput.value);
         localStorage.setItem('agent_starts_conversation', this.agentStartsCheckbox.checked);
@@ -91,17 +275,10 @@ class RealtimeVoiceAgent {
                 }
             } catch (fetchError) {
                 console.warn('Failed to fetch API key from server:', fetchError);
-                // Fallback to manual input
-                apiKey = this.apiKeyInput.value.trim();
-                
-                if (!apiKey) {
-                    alert('Could not load API key from server and no manual key provided.\n\nPlease either:\n1. Make sure the server is running and .env file has OPENAI_API_KEY set, or\n2. Enter your API key manually in settings.');
-                    this.toggleSettings();
-                    this.connectBtn.disabled = false;
-                    this.updateStatus('error', 'No API key');
-                    return;
-                }
-                console.log('Using manually entered API key');
+                alert('Could not load API key from server.\n\nPlease make sure:\n1. The server is running (npm start)\n2. Your .env file exists at: D:\\workspaces\\AI-Tutorials\\AI Agents\\MyAgentsTutorial\\agents\\.env\n3. The .env file contains: OPENAI_API_KEY=sk-your-key');
+                this.connectBtn.disabled = false;
+                this.updateStatus('error', 'No API key');
+                return;
             }
             
             // Setup audio context

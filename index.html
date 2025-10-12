@@ -23,6 +23,43 @@
                 <div class="model-info" id="modelInfo">gpt-4o-realtime-preview</div>
             </div>
 
+            <!-- Document Upload Section -->
+            <div class="upload-section">
+                <h3 class="upload-title">📄 Upload Documents</h3>
+                <div class="upload-container">
+                    <div class="upload-box">
+                        <label for="resumeUpload" class="upload-label">
+                            <div class="upload-icon">📋</div>
+                            <div class="upload-text">
+                                <strong>Resume</strong>
+                                <span class="upload-subtitle">Click to upload PDF, DOC, DOCX, or TXT</span>
+                            </div>
+                        </label>
+                        <input type="file" id="resumeUpload" accept=".pdf,.doc,.docx,.txt" hidden>
+                        <div class="upload-file-info" id="resumeFileInfo"></div>
+                    </div>
+                    
+                    <div class="upload-box">
+                        <label for="jobDescUpload" class="upload-label">
+                            <div class="upload-icon">💼</div>
+                            <div class="upload-text">
+                                <strong>Job Description</strong>
+                                <span class="upload-subtitle">Click to upload PDF, DOC, DOCX, or TXT</span>
+                            </div>
+                        </label>
+                        <input type="file" id="jobDescUpload" accept=".pdf,.doc,.docx,.txt" hidden>
+                        <div class="upload-file-info" id="jobDescFileInfo"></div>
+                    </div>
+                </div>
+                <div class="upload-actions">
+                    <button class="btn btn-primary" id="generatePlanBtn">
+                        <span class="btn-icon">📋</span>
+                        <span class="btn-text">Generate Interview Plan</span>
+                    </button>
+                </div>
+                <div class="plan-response" id="planResponse"></div>
+            </div>
+
             <!-- Conversation display -->
             <div class="conversation-container">
                 <div class="conversation-box" id="conversationBox">
@@ -59,11 +96,6 @@
             <div class="settings-panel">
                 <button class="settings-toggle" id="settingsToggle">⚙️ Settings</button>
                 <div class="settings-content" id="settingsContent">
-                    <div class="setting-group">
-                        <label for="apiKeyInput">OpenAI API Key:</label>
-                        <input type="password" id="apiKeyInput" placeholder="Loaded from .env file">
-                        <small>✅ API key is automatically loaded from .env file. You can also manually enter a key here as a fallback.</small>
-                    </div>
                     <div class="setting-group">
                         <label for="voiceSelect">Agent Voice:</label>
                         <select id="voiceSelect">
