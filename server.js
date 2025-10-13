@@ -48,6 +48,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Serve the new Main page
+app.get('/Main', (req, res) => {
+    res.sendFile(path.join(__dirname, 'main.html'));
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
