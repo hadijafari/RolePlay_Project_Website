@@ -65,6 +65,41 @@ app.get('/api/supabase-config', (req, res) => {
     });
 });
 
+// API endpoint for feedback generation
+app.post('/api/generate-feedback', async (req, res) => {
+    try {
+        const { system_prompt, user_message, model = 'gpt-4o-mini', max_tokens = 1500, temperature = 0.3 } = req.body;
+        
+        if (!system_prompt || !user_message) {
+            return res.status(400).json({ error: 'system_prompt and user_message are required' });
+        }
+        
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({ error: 'OpenAI API key not configured' });
+        }
+        
+        const { OpenAI } = require('openai');
+        const openai = new OpenAI({ apiKey });
+        
+        const response = await openai.chat.completions.create({
+            model: model,
+            messages: [
+                { role: 'system', content: system_prompt },
+                { role: 'user', content: user_message }
+            ],
+            max_tokens: max_tokens,
+            temperature: temperature
+        });
+        
+        res.json({ content: response.choices[0].message.content });
+        
+    } catch (error) {
+        console.error('Error generating feedback:', error);
+        res.status(500).json({ error: 'Failed to generate feedback', details: error.message });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 

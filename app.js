@@ -1,3 +1,214 @@
+// Feedback Agent for Interview Analysis
+class FeedbackAgent {
+    constructor(openaiApiKey) {
+        this.openaiApiKey = openaiApiKey;
+        this.isInitialized = false;
+    }
+
+    async initialize() {
+        try {
+            console.log('Initializing Feedback Agent...');
+            this.isInitialized = true;
+            console.log('✅ Feedback Agent initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize Feedback Agent:', error);
+            throw error;
+        }
+    }
+
+    async generateFeedback(question, answer, questionNumber = 1) {
+        try {
+            console.log(`Generating feedback for question ${questionNumber}`);
+            
+            const systemPrompt = this.getSystemPrompt();
+            const userMessage = this.createUserMessage(question, answer, questionNumber);
+            
+            const response = await this.callOpenAI(systemPrompt, userMessage);
+            const feedbackData = this.parseFeedbackResponse(response);
+            
+            // Add metadata
+            feedbackData.question_number = questionNumber;
+            feedbackData.timestamp = new Date().toISOString();
+            feedbackData.question = question;
+            answer = answer;
+            
+            console.log(`✅ Feedback generated successfully for question ${questionNumber}`);
+            return feedbackData;
+            
+        } catch (error) {
+            console.error(`Error generating feedback for question ${questionNumber}:`, error);
+            return this.getFallbackFeedback(question, answer, questionNumber);
+        }
+    }
+
+    getSystemPrompt() {
+        return `You are an expert technical interviewer and career coach with deep knowledge across multiple technical domains including software engineering, data science, AI/ML, cybersecurity, cloud computing, and system design.
+
+Your role is to provide comprehensive, constructive feedback on interview Q&A pairs. For each question and answer, you must analyze:
+
+1. **Technical Accuracy**: Is the answer technically correct?
+2. **Completeness**: Does the answer address all parts of the question?
+3. **Clarity**: Is the answer clear and well-structured?
+4. **Depth**: Does the answer show appropriate depth of knowledge?
+5. **Practical Experience**: Does the answer demonstrate real-world experience?
+6. **Communication Skills**: How well is the answer communicated?
+
+For each analysis, provide:
+- **Strengths**: What the candidate did well
+- **Weaknesses**: Areas that need improvement
+- **Ideal Answer**: What a strong answer would look like
+- **Technical Assessment**: Professional evaluation of technical knowledge
+- **Improvement Suggestions**: Specific actionable advice
+
+Be constructive, professional, and specific. Focus on helping the candidate improve while being honest about gaps in knowledge or communication.
+
+Format your response as JSON with these exact keys:
+{
+    "strengths": ["strength1", "strength2", ...],
+    "weaknesses": ["weakness1", "weakness2", ...],
+    "ideal_answer": "Detailed ideal answer that addresses the question comprehensively",
+    "technical_assessment": "Professional technical evaluation",
+    "improvement_suggestions": ["suggestion1", "suggestion2", ...],
+    "overall_score": 0.85,
+    "summary": "Brief overall assessment"
+}`;
+    }
+
+    createUserMessage(question, answer, questionNumber) {
+        return `Please analyze this interview Q&A pair and provide comprehensive feedback:
+
+**Question ${questionNumber}:**
+${question}
+
+**Answer:**
+${answer}
+
+Please provide detailed technical feedback including strengths, weaknesses, ideal answer, and improvement suggestions. Be specific and constructive in your analysis.`;
+    }
+
+    async callOpenAI(systemPrompt, userMessage) {
+        try {
+            const response = await fetch('/api/generate-feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    system_prompt: systemPrompt,
+                    user_message: userMessage,
+                    model: 'gpt-4o-mini',
+                    max_tokens: 1500,
+                    temperature: 0.3
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.content;
+            
+        } catch (error) {
+            console.error('OpenAI API call failed:', error);
+            throw error;
+        }
+    }
+
+    parseFeedbackResponse(response) {
+        try {
+            // Try to find JSON in the response
+            const startIdx = response.indexOf('{');
+            const endIdx = response.lastIndexOf('}') + 1;
+            
+            if (startIdx !== -1 && endIdx > startIdx) {
+                const jsonStr = response.substring(startIdx, endIdx);
+                const feedback = JSON.parse(jsonStr);
+                
+                // Validate required keys
+                const requiredKeys = ["strengths", "weaknesses", "ideal_answer", "technical_assessment", "improvement_suggestions"];
+                for (const key of requiredKeys) {
+                    if (!(key in feedback)) {
+                        feedback[key] = "Not provided";
+                    }
+                }
+                
+                // Ensure overall_score is a float
+                if (!("overall_score" in feedback)) {
+                    feedback.overall_score = 0.5;
+                } else {
+                    try {
+                        feedback.overall_score = parseFloat(feedback.overall_score);
+                    } catch (e) {
+                        feedback.overall_score = 0.5;
+                    }
+                }
+                
+                return feedback;
+            } else {
+                console.warn("No JSON found in response, using fallback");
+                return this.getFallbackFeedback("", "", 1);
+            }
+            
+        } catch (error) {
+            console.warn("Failed to parse JSON response:", error);
+            return this.getFallbackFeedback("", "", 1);
+        }
+    }
+
+    getFallbackFeedback(question, answer, questionNumber) {
+        return {
+            strengths: ["Attempted to answer the question", "Showed engagement"],
+            weaknesses: ["Answer could be more detailed", "Consider providing specific examples"],
+            ideal_answer: "A comprehensive answer that directly addresses the question with specific examples and technical details.",
+            technical_assessment: "Unable to assess due to technical issues. Please try again.",
+            improvement_suggestions: [
+                "Provide more specific examples",
+                "Structure your answer clearly",
+                "Include technical details when relevant"
+            ],
+            overall_score: 0.5,
+            summary: "Feedback generation encountered technical issues. Please try again.",
+            question_number: questionNumber,
+            timestamp: new Date().toISOString(),
+            question: question,
+            answer: answer,
+            is_fallback: true
+        };
+    }
+
+    formatFeedbackForDisplay(feedback) {
+        try {
+            const formatted = `
+**FEEDBACK FOR QUESTION ${feedback.question_number || 'N/A'}:**
+
+**Strengths:**
+${feedback.strengths.map(s => `• ${s}`).join('\n')}
+
+**Weaknesses:**
+${feedback.weaknesses.map(w => `• ${w}`).join('\n')}
+
+**Ideal Answer:**
+${feedback.ideal_answer || 'Not provided'}
+
+**Technical Assessment:**
+${feedback.technical_assessment || 'Not provided'}
+
+**Improvement Suggestions:**
+${feedback.improvement_suggestions.map(s => `• ${s}`).join('\n')}
+
+**Overall Score:** ${(feedback.overall_score || 0.5).toFixed(2)}/1.0
+**Summary:** ${feedback.summary || 'No summary available'}
+`;
+            return formatted.trim();
+            
+        } catch (error) {
+            console.error("Error formatting feedback:", error);
+            return `Error formatting feedback: ${error.message}`;
+        }
+    }
+}
+
 // OpenAI Realtime Voice Agent
 class RealtimeVoiceAgent {
     constructor() {
@@ -10,6 +221,12 @@ class RealtimeVoiceAgent {
         this.isPlaying = false;
         this.currentAudioSource = null;
         this.isAgentSpeaking = false;
+        
+        // Feedback agent
+        this.feedbackAgent = null;
+        this.currentQuestion = null;
+        this.questionNumber = 1;
+        this.waitingForAnswer = false;
         
         // UI Elements
         this.statusIndicator = document.getElementById('statusIndicator');
@@ -32,6 +249,9 @@ class RealtimeVoiceAgent {
         this.jobDescFileInfo = document.getElementById('jobDescFileInfo');
         this.generatePlanBtn = document.getElementById('generatePlanBtn');
         this.planResponse = document.getElementById('planResponse');
+        
+        // Feedback elements
+        this.feedbackBox = document.getElementById('feedbackBox');
         
         // Store uploaded files
         this.resumeFile = null;
@@ -276,6 +496,7 @@ After greeting, wait for the user to speak and when the user is finished, you ne
 ${numberedQuestions}
 
 CRITICAL INSTRUCTIONS:
+
 - The agent will say the initial message and asks that the interviewee introduces himself.
 - After the interviewee introduces himself, the agent will respond in one or 2 sentence and then asks the first question.
 - Ask these questions in the exact order listed above
@@ -283,12 +504,12 @@ CRITICAL INSTRUCTIONS:
 - After each answer, provide brief constructive feedback (1-2 sentences) when the answer could be improved or when clarification would be helpful
 - If the answer is good and complete, simply acknowledge it briefly and move to the next question without excessive praise
 - Be encouraging and supportive, but focus on helping the interviewee improve rather than just praising
-- Do NOT ask follow-up questions or elaborations
+- If an answer from the user is not relevant to the question asked at all, ask the same question one more time to guide them back on track
+- If you think a follow-up question would be valuable, you can ask ONLY ONE follow-up question. After the follow-up response, you must proceed to the next question
 - Do NOT skip questions or ask them out of order
 - Do NOT create your own questions
 - Keep the conversation flowing naturally
 - Start with the first question from the questions list and if no question is available, ask this: 'Tell me about your experience and background.'
-
 You are a friendly, professional interviewer conducting a comprehensive interview to assess the candidate's technical skills, experience, and cultural fit for the role.`;
             
             // Update the textarea
@@ -348,6 +569,11 @@ You are a friendly, professional interviewer conducting a comprehensive intervie
                 this.updateStatus('error', 'No API key');
                 return;
             }
+            
+            // Initialize feedback agent
+            this.feedbackAgent = new FeedbackAgent(apiKey);
+            await this.feedbackAgent.initialize();
+            console.log('✅ Feedback Agent initialized');
             
             // Setup audio context
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -487,6 +713,12 @@ You are a friendly, professional interviewer conducting a comprehensive intervie
             case 'conversation.item.input_audio_transcription.completed':
                 if (data.transcript) {
                     this.addMessage('user', data.transcript);
+                    // If we have a question and are waiting for an answer, trigger feedback
+                    if (this.waitingForAnswer && this.currentQuestion && this.feedbackAgent) {
+                        this.generateFeedbackAsync(this.currentQuestion, data.transcript);
+                        this.waitingForAnswer = false;
+                        this.currentQuestion = null;
+                    }
                 }
                 break;
                 
@@ -497,6 +729,9 @@ You are a friendly, professional interviewer conducting a comprehensive intervie
             case 'response.audio_transcript.done':
                 if (data.transcript) {
                     this.addMessage('assistant', data.transcript);
+                    // Store the agent's question for feedback tracking
+                    this.currentQuestion = data.transcript;
+                    this.waitingForAnswer = true;
                 }
                 this.updateStatus('connected', 'Connected - Listening');
                 break;
@@ -734,6 +969,113 @@ You are a friendly, professional interviewer conducting a comprehensive intervie
         
         this.conversationBox.appendChild(messageDiv);
         this.conversationBox.scrollTop = this.conversationBox.scrollHeight;
+    }
+
+    async generateFeedbackAsync(question, answer) {
+        try {
+            console.log('Generating feedback for Q&A pair...');
+            
+            // Generate feedback asynchronously (non-blocking)
+            setTimeout(async () => {
+                try {
+                    const feedback = await this.feedbackAgent.generateFeedback(question, answer, this.questionNumber);
+                    this.displayFeedback(question, answer, feedback);
+                    this.questionNumber++;
+                } catch (error) {
+                    console.error('Error generating feedback:', error);
+                    this.displayFeedbackError(question, answer, error);
+                }
+            }, 100); // Small delay to ensure non-blocking
+            
+        } catch (error) {
+            console.error('Error in generateFeedbackAsync:', error);
+        }
+    }
+
+    displayFeedback(question, answer, feedback) {
+        // Remove welcome message if it exists
+        const welcomeMsg = this.feedbackBox.querySelector('.feedback-welcome');
+        if (welcomeMsg) {
+            welcomeMsg.remove();
+        }
+
+        const feedbackItem = document.createElement('div');
+        feedbackItem.className = 'feedback-item';
+        
+        feedbackItem.innerHTML = `
+            <div class="feedback-question">
+                <div class="feedback-question-label">Interviewer asked:</div>
+                <div class="feedback-content">${question}</div>
+            </div>
+            
+            <div class="feedback-answer">
+                <div class="feedback-answer-label">Interviewee answered:</div>
+                <div class="feedback-content">${answer}</div>
+            </div>
+            
+            <div class="feedback-analysis">
+                <div class="feedback-agent-label">Feedback agent:</div>
+                <div class="feedback-content">
+                    <div class="feedback-strengths">
+                        <strong>Strengths:</strong><br>
+                        ${feedback.strengths.map(s => `• ${s}`).join('<br>')}
+                    </div>
+                    <br>
+                    <div class="feedback-weaknesses">
+                        <strong>Weaknesses:</strong><br>
+                        ${feedback.weaknesses.map(w => `• ${w}`).join('<br>')}
+                    </div>
+                    <br>
+                    <div class="feedback-suggestions">
+                        <strong>Improvement Suggestions:</strong><br>
+                        ${feedback.improvement_suggestions.map(s => `• ${s}`).join('<br>')}
+                    </div>
+                    <br>
+                    <div><strong>Overall Score:</strong> ${(feedback.overall_score || 0.5).toFixed(2)}/1.0</div>
+                    <div><strong>Summary:</strong> ${feedback.summary || 'No summary available'}</div>
+                </div>
+            </div>
+        `;
+        
+        this.feedbackBox.appendChild(feedbackItem);
+        
+        // Scroll to bottom
+        this.feedbackBox.scrollTop = this.feedbackBox.scrollHeight;
+    }
+
+    displayFeedbackError(question, answer, error) {
+        // Remove welcome message if it exists
+        const welcomeMsg = this.feedbackBox.querySelector('.feedback-welcome');
+        if (welcomeMsg) {
+            welcomeMsg.remove();
+        }
+
+        const feedbackItem = document.createElement('div');
+        feedbackItem.className = 'feedback-item';
+        
+        feedbackItem.innerHTML = `
+            <div class="feedback-question">
+                <div class="feedback-question-label">Interviewer asked:</div>
+                <div class="feedback-content">${question}</div>
+            </div>
+            
+            <div class="feedback-answer">
+                <div class="feedback-answer-label">Interviewee answered:</div>
+                <div class="feedback-content">${answer}</div>
+            </div>
+            
+            <div class="feedback-analysis">
+                <div class="feedback-agent-label">Feedback agent:</div>
+                <div class="feedback-content" style="color: #ea4335;">
+                    Error generating feedback: ${error.message}
+                </div>
+            </div>
+        `;
+        
+        this.feedbackBox.appendChild(feedbackItem);
+        
+        // Scroll to bottom
+        this.feedbackBox.scrollTop = this.feedbackBox.scrollHeight;
     }
     
     clearConversation() {
