@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In / Sign Up - AI Mock Interview</title>
+    <link rel="stylesheet" href="login-styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Header with Logo -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-wrapper">
+                    <div class="logo" id="logoMenu">
+                        <img src="Assets/Logo.png" alt="AI Mock Interview">
+                    </div>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <a href="/Main" class="dropdown-item">Main</a>
+                        <a href="/profile" class="dropdown-item">Dashboard</a>
+                        <a href="#pricing" class="dropdown-item">Pricing</a>
+                    </div>
+                </div>
+                <a href="/Main" class="btn-back">← Back to Main</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login/Signup Section -->
+    <section class="auth-section">
+        <div class="container">
+            <div class="auth-container">
+                <div class="auth-box centered">
+                    <!-- Social Auth Section (Default View) -->
+                    <div id="socialAuthSection">
+                        <h2 class="form-title">Welcome Back!</h2>
+
+                        <div class="auth-buttons">
+                            <div class="social-auth-row">
+                                <button class="btn-auth btn-google" id="googleBtn">
+                                    <span class="auth-icon">G</span>
+                                    <span>Google</span>
+                                </button>
+
+                                <button class="btn-auth btn-linkedin" id="linkedinBtn">
+                                    <span class="auth-icon">in</span>
+                                    <span>LinkedIn</span>
+                                </button>
+                            </div>
+
+                            <button class="btn-auth btn-email" id="emailBtn">
+                                <span class="auth-icon">✉</span>
+                                <span>Continue with work email</span>
+                            </button>
+                        </div>
+
+                        <div class="auth-footer">
+                            <p class="terms-text">
+                                By signing up, you agree to our <a href="#terms" class="link-text">Terms of Service</a> and <a href="#privacy" class="link-text">Privacy Policy</a>.
+                            </p>
+                        <p class="signup-prompt">
+                            Don't have an account? <a href="#" class="link-highlight" id="showSignUpBtn">Sign up</a>
+                        </p>
+                        </div>
+                    </div>
+
+                    <!-- Email Sign In Section (Hidden by Default) -->
+                    <div id="emailSignInSection" style="display: none;">
+                        <button class="btn-back" id="backFromSignInBtn">← Back</button>
+                        
+                        <h2 class="form-title">Email Sign In</h2>
+                        <p class="form-subtitle">Enter your email and password</p>
+
+                        <!-- Sign In Form -->
+                        <form id="emailSignInForm">
+                            <div class="form-group">
+                                <label for="signInEmail">Email Address</label>
+                                <input type="email" id="signInEmail" placeholder="you@example.com" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signInPassword">Password</label>
+                                <input type="password" id="signInPassword" placeholder="Enter your password" required>
+                            </div>
+
+                            <button type="submit" class="btn-submit">Sign In</button>
+                            
+                            <p class="form-link">
+                                <a href="#forgot" class="link-text">Forgot password?</a>
+                            </p>
+                        </form>
+                    </div>
+
+                    <!-- Email Sign Up Section (Hidden by Default) -->
+                    <div id="emailSignUpSection" style="display: none;">
+                        <button class="btn-back" id="backFromSignUpBtn">← Back</button>
+                        
+                        <h2 class="form-title">Create Account</h2>
+                        <p class="form-subtitle">Sign up to start your interview practice</p>
+
+                        <!-- Sign Up Form -->
+                        <form id="emailSignUpForm">
+                            <div class="form-group">
+                                <label for="signUpName">Full Name</label>
+                                <input type="text" id="signUpName" placeholder="John Doe" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signUpEmail">Email Address</label>
+                                <input type="email" id="signUpEmail" placeholder="you@example.com" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signUpPassword">Password</label>
+                                <input type="password" id="signUpPassword" placeholder="At least 6 characters" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signUpConfirmPassword">Confirm Password</label>
+                                <input type="password" id="signUpConfirmPassword" placeholder="Re-enter password" required>
+                            </div>
+
+                            <button type="submit" class="btn-submit">Create Account</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Supabase Authentication
+        let supabaseClient = null;
+        let isInitializing = false;
+
+        // Initialize Supabase
+        async function initializeSupabase() {
+            if (isInitializing) return;
+            isInitializing = true;
+
+            try {
+                console.log('Fetching Supabase config from /api/supabase-config...');
+                
+                // Fetch Supabase configuration
+                const response = await fetch('/api/supabase-config');
+                console.log('Config response status:', response.status);
+                
+                const config = await response.json();
+                console.log('Config received:', { 
+                    hasUrl: !!config.supabaseUrl, 
+                    hasKey: !!config.supabaseAnonKey,
+                    status: config.status,
+                    error: config.error 
+                });
+
+                if (!config.supabaseUrl || !config.supabaseAnonKey) {
+                    console.error('Config details:', config);
+                    throw new Error(config.message || 'Supabase configuration not available');
+                }
+
+                // Check if supabase library is loaded
+                if (typeof supabase === 'undefined') {
+                    throw new Error('Supabase library not loaded. Please refresh the page.');
+                }
+
+                // Create Supabase client
+                const { createClient } = supabase;
+                supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
+
+                console.log('✅ Supabase client created');
+                console.log('Supabase client object:', supabaseClient);
+                console.log('Supabase auth object:', supabaseClient.auth);
+
+                // Test if we can access auth methods
+                console.log('Auth methods available:', {
+                    signInWithOAuth: typeof supabaseClient.auth.signInWithOAuth,
+                    getSession: typeof supabaseClient.auth.getSession
+                });
+
+                // Listen for auth state changes
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    console.log('Auth event:', event);
+                    
+                    if (event === 'SIGNED_IN' && session) {
+                        console.log('User signed in:', session.user.email);
+                        localStorage.setItem('user', JSON.stringify(session.user));
+                        window.location.href = '/profile';
+                    } else if (event === 'SIGNED_OUT') {
+                        console.log('User signed out');
+                        localStorage.removeItem('user');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Supabase initialization error:', error);
+                console.error('Error details:', error.stack);
+                alert('Failed to initialize authentication: ' + error.message + '\n\nCheck console for details.');
+            } finally {
+                isInitializing = false;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSupabase();
+        });
+
+        // Dropdown menu functionality
+        const logo = document.getElementById('logoMenu');
+        const dropdown = document.getElementById('dropdownMenu');
+
+        logo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!logo.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+
+        const dropdownItems = document.querySelectorAll('.dropdown-item');
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', () => {
+                dropdown.classList.remove('active');
+            });
+        });
+
+        // Auth button handlers
+        const googleBtn = document.getElementById('googleBtn');
+        const linkedinBtn = document.getElementById('linkedinBtn');
+        const emailBtn = document.getElementById('emailBtn');
+
+        googleBtn.addEventListener('click', async () => {
+            console.log('Google button clicked');
+            console.log('Supabase client initialized:', !!supabaseClient);
+            
+            if (!supabaseClient) {
+                alert('Authentication not ready. Please wait or refresh the page.');
+                console.error('Supabase client is null');
+                return;
+            }
+
+            try {
+                googleBtn.disabled = true;
+                googleBtn.innerHTML = '<span class="auth-icon">⏳</span><span>Loading...</span>';
+
+                console.log('Calling signInWithOAuth...');
+                console.log('Redirect URL will be:', `${window.location.origin}/auth/callback`);
+                console.log('Window origin:', window.location.origin);
+
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${window.location.origin}/auth/callback`
+                    }
+                });
+
+                console.log('OAuth response:', { data, error });
+
+                if (error) {
+                    console.error('OAuth error:', error);
+                    throw error;
+                }
+
+                console.log('Redirecting to Google authentication...');
+                // Browser will automatically redirect to Google
+
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                alert('Failed to sign in with Google: ' + error.message);
+                googleBtn.disabled = false;
+                googleBtn.innerHTML = '<span class="auth-icon">G</span><span>Continue with Google</span>';
+            }
+        });
+
+        linkedinBtn.addEventListener('click', async () => {
+            console.log('LinkedIn button clicked');
+            console.log('Supabase client initialized:', !!supabaseClient);
+            
+            if (!supabaseClient) {
+                alert('Authentication not ready. Please wait...');
+                return;
+            }
+
+            try {
+                linkedinBtn.disabled = true;
+                linkedinBtn.innerHTML = '<span class="auth-icon">⏳</span><span>Loading...</span>';
+
+                console.log('Calling signInWithOAuth for LinkedIn...');
+                console.log('Redirect URL will be:', `${window.location.origin}/auth/callback`);
+
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'linkedin_oidc',
+                    options: {
+                        redirectTo: `${window.location.origin}/auth/callback`
+                    }
+                });
+
+                console.log('LinkedIn OAuth response:', { data, error });
+
+                if (error) {
+                    console.error('LinkedIn OAuth error:', error);
+                    throw error;
+                }
+
+                console.log('Redirecting to LinkedIn authentication...');
+                // Browser will automatically redirect to LinkedIn
+
+            } catch (error) {
+                console.error('LinkedIn sign-in error:', error);
+                alert('Failed to sign in with LinkedIn: ' + error.message + '\n\nMake sure LinkedIn provider is enabled in Supabase Dashboard.');
+                linkedinBtn.disabled = false;
+                linkedinBtn.innerHTML = '<span class="auth-icon">in</span><span>Continue with LinkedIn</span>';
+            }
+        });
+
+        // Email button - show email sign in section
+        emailBtn.addEventListener('click', () => {
+            document.getElementById('socialAuthSection').style.display = 'none';
+            document.getElementById('emailSignInSection').style.display = 'block';
+            document.getElementById('emailSignUpSection').style.display = 'none';
+        });
+
+        // Sign up link - show email sign up section
+        const showSignUpBtn = document.getElementById('showSignUpBtn');
+        showSignUpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('socialAuthSection').style.display = 'none';
+            document.getElementById('emailSignInSection').style.display = 'none';
+            document.getElementById('emailSignUpSection').style.display = 'block';
+        });
+
+        // Back buttons - show social auth section
+        const backFromSignInBtn = document.getElementById('backFromSignInBtn');
+        const backFromSignUpBtn = document.getElementById('backFromSignUpBtn');
+
+        backFromSignInBtn.addEventListener('click', () => {
+            document.getElementById('emailSignInSection').style.display = 'none';
+            document.getElementById('socialAuthSection').style.display = 'block';
+        });
+
+        backFromSignUpBtn.addEventListener('click', () => {
+            document.getElementById('emailSignUpSection').style.display = 'none';
+            document.getElementById('socialAuthSection').style.display = 'block';
+        });
+
+        // Email Sign In Form
+        emailSignInForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('signInEmail').value;
+            const password = document.getElementById('signInPassword').value;
+
+            if (!supabaseClient) {
+                alert('Authentication not ready. Please wait...');
+                return;
+            }
+
+            const submitBtn = emailSignInForm.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in...';
+
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                console.log('Email sign-in successful:', data.user.email);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // Redirect handled by auth state listener
+                window.location.href = '/profile';
+
+            } catch (error) {
+                console.error('Email sign-in error:', error);
+                alert('Failed to sign in: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+
+        // Email Sign Up Form
+        emailSignUpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('signUpName').value;
+            const email = document.getElementById('signUpEmail').value;
+            const password = document.getElementById('signUpPassword').value;
+            const confirmPassword = document.getElementById('signUpConfirmPassword').value;
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            // Validate password length
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+
+            if (!supabaseClient) {
+                alert('Authentication not ready. Please wait...');
+                return;
+            }
+
+            const submitBtn = emailSignUpForm.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating account...';
+
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: name
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                console.log('Sign up successful:', data);
+
+                if (data.user && data.session) {
+                    // User is automatically signed in
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    alert('Account created successfully! Redirecting to dashboard...');
+                    window.location.href = '/profile';
+                } else if (data.user && !data.session) {
+                    // Email confirmation required
+                    alert('Account created! Please check your email to confirm your account before signing in.');
+                    // Go back to social auth section
+                    document.getElementById('emailSignUpSection').style.display = 'none';
+                    document.getElementById('socialAuthSection').style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+
+            } catch (error) {
+                console.error('Sign up error:', error);
+                alert('Failed to create account: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+    </script>
+</body>
+</html>
+

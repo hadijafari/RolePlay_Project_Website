@@ -16,11 +16,23 @@
                         <img src="Assets/Logo.png" alt="JAMPPERO INC">
                     </div>
                     <div class="dropdown-menu" id="dropdownMenu">
-                        <a href="#main" class="dropdown-item">Main</a>
+                        <a href="/Main" class="dropdown-item">Main</a>
+                        <a href="/profile" class="dropdown-item">Dashboard</a>
                         <a href="#pricing" class="dropdown-item">Pricing</a>
-                        <a href="#signup" class="dropdown-item">Sign Up</a>
-                        <a href="#about" class="dropdown-item">About</a>
                     </div>
+                </div>
+                <div class="header-right">
+                    <div class="user-menu-wrapper" id="userInfo" style="display:none;">
+                        <div class="user-info clickable" id="userNameBtn">
+                            <span id="userName"></span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="#profile" class="user-dropdown-item">👤 User Profile</a>
+                            <a href="#" class="user-dropdown-item" id="signOutBtn">🚪 Sign Out</a>
+                        </div>
+                    </div>
+                    <a href="/login" class="btn-signup" id="signInBtn">Sign In</a>
                 </div>
             </div>
         </div>
@@ -230,7 +242,58 @@
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase Authentication for Main Page
+        let supabaseClient = null;
+
+        // Initialize Supabase
+        async function initializeSupabase() {
+            try {
+                const response = await fetch('/api/supabase-config');
+                const config = await response.json();
+
+                if (config.supabaseUrl && config.supabaseAnonKey) {
+                    const { createClient } = supabase;
+                    supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
+                    console.log('✅ Supabase initialized on main page');
+
+                    // Check current session
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    
+                    if (session && session.user) {
+                        console.log('User is logged in:', session.user.email);
+                        
+                        // Display user info
+                        const userInfo = document.getElementById('userInfo');
+                        const userName = document.getElementById('userName');
+                        const signInBtn = document.getElementById('signInBtn');
+                        
+                        if (userInfo && userName) {
+                            // Use user's name if available, otherwise email
+                            const displayName = session.user.user_metadata?.full_name || 
+                                              session.user.user_metadata?.name || 
+                                              session.user.email;
+                            userName.textContent = displayName;
+                            userInfo.style.display = 'block';
+                            
+                            // Hide Sign In button when logged in
+                            if (signInBtn) {
+                                signInBtn.style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Supabase initialization error:', error);
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSupabase();
+        });
+
         // Dropdown menu functionality
         const logo = document.getElementById('logoMenu');
         const dropdown = document.getElementById('dropdownMenu');
@@ -303,6 +366,49 @@
                 });
             });
         }
+
+        // User dropdown menu functionality
+        const userNameBtn = document.getElementById('userNameBtn');
+        const userDropdown = document.getElementById('userDropdown');
+
+        if (userNameBtn && userDropdown) {
+            userNameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('active');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!userNameBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Sign out functionality
+        document.addEventListener('click', async (e) => {
+            if (e.target && e.target.id === 'signOutBtn') {
+                e.preventDefault();
+                
+                if (!supabaseClient) {
+                    alert('Authentication not ready');
+                    return;
+                }
+
+                try {
+                    const { error } = await supabaseClient.auth.signOut();
+                    
+                    if (error) throw error;
+                    
+                    console.log('Sign out successful');
+                    localStorage.removeItem('user');
+                    window.location.href = '/Main';
+                } catch (error) {
+                    console.error('Sign out error:', error);
+                    alert('Failed to sign out: ' + error.message);
+                }
+            }
+        });
 
         // Optimize scroll performance
         let ticking = false;

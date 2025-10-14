@@ -3,14 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI Realtime Voice Agent</title>
+    <title>Interview Dashboard - AI Mock Interview</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Header with Logo -->
+    <header class="page-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-wrapper">
+                    <div class="logo" id="logoMenu">
+                        <img src="Assets/Logo.png" alt="AI Mock Interview">
+                    </div>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <a href="/Main" class="dropdown-item">Main</a>
+                        <a href="#pricing" class="dropdown-item">Pricing</a>
+                        <a href="#" class="dropdown-item" id="signOutBtn">Sign Out</a>
+                    </div>
+                </div>
+                <div class="user-menu-wrapper" id="userInfo" style="display:none;">
+                    <div class="user-info clickable" id="userNameBtn">
+                        <span id="userDisplayName"></span>
+                        <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="#profile" class="user-dropdown-item">👤 User Profile</a>
+                        <a href="#" class="user-dropdown-item" id="signOutBtnUser">🚪 Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
     <div class="container">
-        <div class="header">
-            <h1>🎙️ Voice Agent</h1>
-            <p class="subtitle">Powered by OpenAI Realtime API</p>
+        <div class="dashboard-header">
+            <h1>🎙️ Interview Dashboard</h1>
+            <p class="subtitle">Practice your interview with our AI voice agent</p>
         </div>
 
         <div class="main-content">
@@ -124,6 +152,140 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase Authentication for Dashboard
+        let supabaseClient = null;
+
+        // Initialize Supabase
+        async function initializeSupabase() {
+            try {
+                const response = await fetch('/api/supabase-config');
+                const config = await response.json();
+
+                if (config.supabaseUrl && config.supabaseAnonKey) {
+                    const { createClient } = supabase;
+                    supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
+                    console.log('✅ Supabase initialized on dashboard');
+
+                    // Check current session
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    
+                    if (session && session.user) {
+                        console.log('User is logged in:', session.user.email);
+                        // Display user name/email
+                        const userInfo = document.getElementById('userInfo');
+                        const userDisplayName = document.getElementById('userDisplayName');
+                        if (userInfo && userDisplayName) {
+                            // Use user's name if available, otherwise email
+                            const displayName = session.user.user_metadata?.full_name || 
+                                              session.user.user_metadata?.name || 
+                                              session.user.email;
+                            userDisplayName.textContent = displayName;
+                            userInfo.style.display = 'block';
+                        }
+                    } else {
+                        console.log('No active session');
+                    }
+                }
+            } catch (error) {
+                console.error('Supabase initialization error:', error);
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSupabase();
+        });
+
+        // Dropdown menu functionality
+        const logoMenu = document.getElementById('logoMenu');
+        const dropdownMenuHeader = document.getElementById('dropdownMenu');
+
+        if (logoMenu && dropdownMenuHeader) {
+            logoMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenuHeader.classList.toggle('active');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!logoMenu.contains(e.target) && !dropdownMenuHeader.contains(e.target)) {
+                    dropdownMenuHeader.classList.remove('active');
+                }
+            });
+
+            // Close dropdown when clicking a menu item (except sign out)
+            const dropdownItems = document.querySelectorAll('.dropdown-item');
+            dropdownItems.forEach(item => {
+                if (item.id !== 'signOutBtn') {
+                    item.addEventListener('click', () => {
+                        dropdownMenuHeader.classList.remove('active');
+                    });
+                }
+            });
+        }
+
+        // User dropdown menu functionality
+        const userNameBtn = document.getElementById('userNameBtn');
+        const userDropdown = document.getElementById('userDropdown');
+
+        if (userNameBtn && userDropdown) {
+            userNameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('active');
+                // Close logo dropdown if open
+                if (dropdownMenuHeader) {
+                    dropdownMenuHeader.classList.remove('active');
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!userNameBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Sign out functionality
+        const signOutBtn = document.getElementById('signOutBtn');
+        const signOutBtnUser = document.getElementById('signOutBtnUser');
+        
+        async function handleSignOut() {
+            if (!supabaseClient) {
+                alert('Authentication not ready');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.auth.signOut();
+                
+                if (error) throw error;
+                
+                console.log('Sign out successful');
+                localStorage.removeItem('user');
+                window.location.href = '/Main';
+            } catch (error) {
+                console.error('Sign out error:', error);
+                alert('Failed to sign out: ' + error.message);
+            }
+        }
+        
+        if (signOutBtn) {
+            signOutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleSignOut();
+            });
+        }
+        
+        if (signOutBtnUser) {
+            signOutBtnUser.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleSignOut();
+            });
+        }
+    </script>
     <script src="app.js"></script>
 </body>
 </html>

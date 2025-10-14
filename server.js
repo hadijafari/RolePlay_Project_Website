@@ -34,6 +34,37 @@ app.get('/api/config', (req, res) => {
     });
 });
 
+// API endpoint to get Supabase configuration
+app.get('/api/supabase-config', (req, res) => {
+    const supabaseUrl = process.env.SUPABASE_URL_ROLEPLAY_PROJECT;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY_ROLEPLAY_PROJECT;
+    
+    console.log('Supabase config request:');
+    console.log('  - URL exists:', !!supabaseUrl);
+    console.log('  - Anon Key exists:', !!supabaseAnonKey);
+    console.log('  - URL value:', supabaseUrl ? 'Present' : 'Missing');
+    console.log('  - All env vars:', Object.keys(process.env).filter(k => k.includes('SUPABASE')));
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return res.status(500).json({ 
+            error: 'Supabase configuration not found',
+            message: 'Please make sure SUPABASE_URL_ROLEPLAY_PROJECT and SUPABASE_ANON_KEY_ROLEPLAY_PROJECT are set in your .env file',
+            debug: {
+                urlExists: !!supabaseUrl,
+                anonKeyExists: !!supabaseAnonKey,
+                envPath: envPath,
+                supabaseKeysFound: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+            }
+        });
+    }
+    
+    res.json({ 
+        supabaseUrl: supabaseUrl,
+        supabaseAnonKey: supabaseAnonKey,
+        status: 'success'
+    });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -43,14 +74,29 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Serve the main page
+// Serve the main landing page
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'main.html'));
+});
+
+// Serve the Main page
+app.get('/Main', (req, res) => {
+    res.sendFile(path.join(__dirname, 'main.html'));
+});
+
+// Serve the profile/dashboard page
+app.get('/profile', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Serve the new Main page
-app.get('/Main', (req, res) => {
-    res.sendFile(path.join(__dirname, 'main.html'));
+// Serve the login/signup page
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// Serve the auth callback page
+app.get('/auth/callback', (req, res) => {
+    res.sendFile(path.join(__dirname, 'auth-callback.html'));
 });
 
 // Start server
@@ -58,9 +104,16 @@ app.listen(PORT, () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
     console.log(`📁 Serving files from: ${__dirname}`);
     console.log(`🔑 API Key loaded: ${process.env.OPENAI_API_KEY ? '✅ Yes' : '❌ No'}`);
+    console.log(`🔐 Supabase URL loaded: ${process.env.SUPABASE_URL_ROLEPLAY_PROJECT ? '✅ Yes' : '❌ No'}`);
+    console.log(`🔐 Supabase Anon Key loaded: ${process.env.SUPABASE_ANON_KEY_ROLEPLAY_PROJECT ? '✅ Yes' : '❌ No'}`);
     
     if (!process.env.OPENAI_API_KEY) {
         console.warn('⚠️  Warning: OPENAI_API_KEY not found in .env file');
+        console.log(`Looking for .env at: ${envPath}`);
+    }
+    
+    if (!process.env.SUPABASE_URL_ROLEPLAY_PROJECT || !process.env.SUPABASE_ANON_KEY_ROLEPLAY_PROJECT) {
+        console.warn('⚠️  Warning: Supabase keys not found in .env file');
         console.log(`Looking for .env at: ${envPath}`);
     }
 });
