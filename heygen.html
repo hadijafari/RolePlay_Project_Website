@@ -66,15 +66,27 @@
                     </div>
                     <div class="col">
                         <div class="field">
-                            <label for="avatarId">Avatar ID</label>
-                            <input id="avatarId" placeholder="default" />
+                            <label for="avatarId">Select Avatar (Curated)</label>
+                            <select id="avatarId">
+                                <option value="">-- Select --</option>
+                                <option value="default">Default Avatar</option>
+                                <option value="Ann_Therapist_public">Ann - Therapist</option>
+                                <option value="Shawn_Therapist_public">Shawn - Therapist</option>
+                                <option value="Bryan_FitnessCoach_public">Bryan - Fitness Coach</option>
+                                <option value="Dexter_Doctor_Standing2_public">Dexter - Doctor</option>
+                                <option value="Elenora_IT_Sitting_public">Elenora - Tech Expert</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="avatarIdApi">OR Select Avatar (All Available)</label>
+                            <select id="avatarIdApi">
+                                <option value="">Loading avatars...</option>
+                            </select>
                         </div>
                         <div class="field">
                             <label for="language">Language</label>
                             <select id="language">
-                                <option value="en" selected>English (en)</option>
-                                <option value="ja">Japanese (ja)</option>
-                                <option value="es">Spanish (es)</option>
+                                <option value="English" selected>Loading languages...</option>
                             </select>
                         </div>
                         <div class="field">
@@ -83,11 +95,11 @@
                         </div>
                         <div class="field">
                             <label for="systemPrompt">System Prompt (Optional)</label>
-                            <textarea id="systemPrompt" rows="4" placeholder="Enter custom system prompt for the avatar..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #1a1a1a; color: #fff; resize: vertical; font-family: inherit;"></textarea>
+                            <textarea id="systemPrompt" rows="4" placeholder="Enter custom system prompt for the avatar..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #1a1a1a; color: #fff; resize: vertical; font-family: inherit;">You are a helpfull assistant</textarea>
                         </div>
                         <div class="field">
                             <label for="greetingText">Initial Greeting (Optional)</label>
-                            <input id="greetingText" placeholder="e.g., Hello! How can I help you today?" />
+                            <input id="greetingText" value="Hello my name is Hasi and I am here to help you" placeholder="e.g., Hello! How can I help you today?" />
                         </div>
                         <div class="controls">
                             <button class="btn" id="btnMute" disabled>Mute Mic</button>

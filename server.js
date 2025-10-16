@@ -48,6 +48,88 @@ app.post('/api/heygen/get-access-token', async (req, res) => {
     }
 });
 
+// API endpoint to list available HeyGen languages
+app.get('/api/heygen/list-languages', async (req, res) => {
+    try {
+        const heygenApiKey = process.env.HEYGEN_API_KEY;
+        if (!heygenApiKey) {
+            return res.status(500).json({ error: 'HEYGEN_API_KEY is missing from .env' });
+        }
+
+        const baseApiUrl = process.env.HEYGEN_BASE_API_URL || 'https://api.heygen.com';
+        const fetch = (await import('node-fetch')).default;
+
+        console.log('Fetching languages from:', `${baseApiUrl}/v2/video_translate/target_languages`);
+
+        const resp = await fetch(`${baseApiUrl}/v2/video_translate/target_languages`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'x-api-key': heygenApiKey
+            }
+        });
+
+        if (!resp.ok) {
+            const text = await resp.text();
+            console.error('Failed to fetch languages. Status:', resp.status);
+            console.error('Response:', text);
+            return res.status(resp.status).json({ 
+                error: 'Failed to retrieve languages from HeyGen', 
+                details: text,
+                status: resp.status
+            });
+        }
+
+        const data = await resp.json();
+        console.log('✅ Languages retrieved successfully. Count:', data?.data?.length || 0);
+        return res.status(200).json(data);
+    } catch (error) {
+        console.error('Error retrieving HeyGen languages:', error);
+        return res.status(500).json({ error: 'Failed to retrieve languages', details: error.message });
+    }
+});
+
+// API endpoint to list available HeyGen avatars
+app.get('/api/heygen/list-avatars', async (req, res) => {
+    try {
+        const heygenApiKey = process.env.HEYGEN_API_KEY;
+        if (!heygenApiKey) {
+            return res.status(500).json({ error: 'HEYGEN_API_KEY is missing from .env' });
+        }
+
+        const baseApiUrl = process.env.HEYGEN_BASE_API_URL || 'https://api.heygen.com';
+        const fetch = (await import('node-fetch')).default;
+
+        console.log('Fetching avatars from:', `${baseApiUrl}/v1/streaming/avatar.list`);
+
+        const resp = await fetch(`${baseApiUrl}/v1/streaming/avatar.list`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Api-Key': heygenApiKey
+            }
+        });
+
+        if (!resp.ok) {
+            const text = await resp.text();
+            console.error('Failed to fetch avatars. Status:', resp.status);
+            console.error('Response:', text);
+            return res.status(resp.status).json({ 
+                error: 'Failed to retrieve avatars from HeyGen', 
+                details: text,
+                status: resp.status
+            });
+        }
+
+        const data = await resp.json();
+        console.log('✅ Avatars retrieved successfully. Count:', data?.data?.avatars?.length || 0);
+        return res.status(200).json(data);
+    } catch (error) {
+        console.error('Error retrieving HeyGen avatars:', error);
+        return res.status(500).json({ error: 'Failed to retrieve avatars', details: error.message });
+    }
+});
+
 // API endpoint to get the OpenAI API key
 app.get('/api/config', (req, res) => {
     const apiKey = process.env.OPENAI_API_KEY;

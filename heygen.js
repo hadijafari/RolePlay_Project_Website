@@ -29,6 +29,7 @@ const els = {
   unmute: document.getElementById('btnUnmute'),
   badge: document.getElementById('connectionBadge'),
   avatarId: document.getElementById('avatarId'),
+  avatarIdApi: document.getElementById('avatarIdApi'),
   language: document.getElementById('language'),
   voiceRate: document.getElementById('voiceRate'),
   systemPrompt: document.getElementById('systemPrompt'),
@@ -106,6 +107,147 @@ async function fetchAccessToken() {
     throw new Error('Failed to get access token: ' + text);
   }
   return resp.text();
+}
+
+async function loadLanguagesFromAPI() {
+  try {
+    console.log('🌐 Loading languages from API...');
+    const resp = await fetch('/api/heygen/list-languages');
+    
+    if (!resp.ok) {
+      let errorMsg = `HTTP ${resp.status}: ${resp.statusText}`;
+      try {
+        const error = await resp.json();
+        console.error('Failed to load languages:', error);
+        errorMsg = error.error || errorMsg;
+      } catch {
+        const text = await resp.text();
+        console.error('Failed to load languages (HTML response):', text.substring(0, 200));
+      }
+      els.language.innerHTML = '<option value="English">English (default)</option>';
+      console.warn('Using default language only');
+      return;
+    }
+
+    const data = await resp.json();
+    console.log('✅ Languages loaded:', data);
+
+    // Clear loading message
+    els.language.innerHTML = '';
+
+    // HeyGen API returns languages as array in data.data
+    const languageList = data.data || [];
+    
+    if (Array.isArray(languageList) && languageList.length > 0) {
+      // Add English first as default
+      const englishIndex = languageList.findIndex(lang => 
+        lang.language_name === 'English' || lang.language === 'English'
+      );
+      
+      if (englishIndex !== -1) {
+        const english = languageList[englishIndex];
+        const option = document.createElement('option');
+        option.value = english.language_name || english.language || 'English';
+        option.textContent = english.language_name || english.language || 'English';
+        option.selected = true;
+        els.language.appendChild(option);
+        
+        // Remove English from list to avoid duplicate
+        languageList.splice(englishIndex, 1);
+      }
+
+      // Add all other languages alphabetically
+      languageList.sort((a, b) => {
+        const nameA = a.language_name || a.language || '';
+        const nameB = b.language_name || b.language || '';
+        return nameA.localeCompare(nameB);
+      });
+
+      languageList.forEach(lang => {
+        const option = document.createElement('option');
+        option.value = lang.language_name || lang.language;
+        option.textContent = lang.language_name || lang.language;
+        els.language.appendChild(option);
+      });
+      
+      console.log(`✅ Loaded ${languageList.length + 1} languages from API`);
+    } else {
+      els.language.innerHTML = '<option value="English">English (default)</option>';
+      console.warn('No languages found in API response, using default');
+    }
+  } catch (error) {
+    console.error('Error loading languages:', error);
+    els.language.innerHTML = '<option value="English">English (default)</option>';
+  }
+}
+
+async function loadAvatarsFromAPI() {
+  try {
+    console.log('📥 Loading avatars from API...');
+    const resp = await fetch('/api/heygen/list-avatars');
+    
+    if (!resp.ok) {
+      let errorMsg = `HTTP ${resp.status}: ${resp.statusText}`;
+      try {
+        const error = await resp.json();
+        console.error('Failed to load avatars:', error);
+        errorMsg = error.error || errorMsg;
+      } catch {
+        const text = await resp.text();
+        console.error('Failed to load avatars (HTML response):', text.substring(0, 200));
+      }
+      els.avatarIdApi.innerHTML = `<option value="">Failed: ${errorMsg}</option>`;
+      return;
+    }
+
+    const data = await resp.json();
+    console.log('✅ Avatars loaded:', data);
+
+    // Clear loading message
+    els.avatarIdApi.innerHTML = '<option value="">-- Select --</option>';
+
+    // Populate dropdown with avatars from API
+    // HeyGen API returns data directly in 'data' array, not 'data.avatars'
+    const avatarList = data.data || [];
+    
+    if (Array.isArray(avatarList) && avatarList.length > 0) {
+      avatarList.forEach(avatar => {
+        const option = document.createElement('option');
+        option.value = avatar.avatar_id;
+        // Use pose_name if available, otherwise fallback to avatar_id
+        option.textContent = avatar.pose_name || avatar.avatar_name || avatar.avatar_id;
+        els.avatarIdApi.appendChild(option);
+      });
+      console.log(`✅ Loaded ${avatarList.length} avatars from API`);
+    } else {
+      els.avatarIdApi.innerHTML = '<option value="">No avatars available</option>';
+      console.warn('No avatars found in API response');
+    }
+  } catch (error) {
+    console.error('Error loading avatars:', error);
+    els.avatarIdApi.innerHTML = '<option value="">Server not restarted - Restart server</option>';
+  }
+}
+
+// Handle dropdown selection logic - disable one when other is selected
+function setupAvatarDropdownLogic() {
+  els.avatarId.addEventListener('change', () => {
+    if (els.avatarId.value) {
+      els.avatarIdApi.disabled = true;
+      els.avatarIdApi.value = '';
+    } else {
+      els.avatarIdApi.disabled = false;
+    }
+  });
+
+  els.avatarIdApi.addEventListener('change', () => {
+    if (els.avatarIdApi.value) {
+      els.avatarId.disabled = true;
+      els.avatarId.value = '';
+    } else {
+      els.avatarId.disabled = false;
+    }
+  });
 }
 
 function attachCommonEvents(avatar) {
@@ -199,7 +341,8 @@ async function startSession({ isVoiceChat }) {
     
     attachCommonEvents(state.avatar);
 
-    const avatarName = (els.avatarId.value || 'default').trim();
+    // Get avatar ID from whichever dropdown is selected
+    const avatarName = (els.avatarIdApi.value || els.avatarId.value || 'default').trim();
     const language = els.language.value || 'en';
     const rate = Math.min(1.5, Math.max(0.5, parseFloat(els.voiceRate.value) || 1.2));
     const systemPrompt = els.systemPrompt.value.trim();
@@ -305,4 +448,18 @@ els.unmute.addEventListener('click', async () => {
   }
 });
 
-console.log('📄 HeyGen page ready!');
+// Initialize page
+(async () => {
+  console.log('📄 HeyGen page initializing...');
+  
+  // Load languages and avatars from API in parallel
+  await Promise.all([
+    loadLanguagesFromAPI(),
+    loadAvatarsFromAPI()
+  ]);
+  
+  // Setup dropdown logic
+  setupAvatarDropdownLogic();
+  
+  console.log('✅ HeyGen page ready!');
+})();
