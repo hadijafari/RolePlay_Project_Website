@@ -28,6 +28,7 @@ const els = {
   avatarId: document.getElementById('avatarId'),
   language: document.getElementById('language'),
   voiceRate: document.getElementById('voiceRate'),
+  systemPrompt: document.getElementById('systemPrompt'),
 };
 
 function setConnected(connected) {
@@ -93,6 +94,7 @@ async function startSession({ isVoiceChat }) {
     const avatarName = (els.avatarId.value || 'default').trim();
     const language = els.language.value || 'en';
     const rate = Math.min(1.5, Math.max(0.5, parseFloat(els.voiceRate.value) || 1.2));
+    const systemPrompt = els.systemPrompt.value.trim();
 
     const startConfig = {
       quality: AvatarQuality.Low,
@@ -105,6 +107,12 @@ async function startSession({ isVoiceChat }) {
         emotion: VoiceEmotion.EXCITED,
       },
     };
+
+    // Add system prompt if provided
+    if (systemPrompt) {
+      startConfig.knowledgeBase = systemPrompt;
+      console.log('📝 Using custom system prompt:', systemPrompt);
+    }
 
     console.log('📋 Starting avatar with config:', startConfig);
     await state.avatar.createStartAvatar(startConfig);
