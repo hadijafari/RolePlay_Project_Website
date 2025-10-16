@@ -5,6 +5,7 @@ import StreamingAvatar, {
   VoiceEmotion,
   VoiceChatTransport,
   STTProvider,
+  TaskType,
 } from '@heygen/streaming-avatar';
 
 console.log('✅ HeyGen SDK imported successfully');
@@ -31,6 +32,7 @@ const els = {
   language: document.getElementById('language'),
   voiceRate: document.getElementById('voiceRate'),
   systemPrompt: document.getElementById('systemPrompt'),
+  greetingText: document.getElementById('greetingText'),
   transcriptPanel: document.getElementById('transcriptPanel'),
   messageContainer: document.getElementById('messageContainer'),
 };
@@ -223,6 +225,17 @@ async function startSession({ isVoiceChat }) {
     console.log('📋 Starting avatar with config:', startConfig);
     await state.avatar.createStartAvatar(startConfig);
     console.log('✅ Avatar session started');
+    
+    // Speak greeting if provided
+    const greetingText = els.greetingText.value.trim();
+    if (greetingText) {
+      console.log('👋 Speaking greeting:', greetingText);
+      await state.avatar.speak({ 
+        text: greetingText,
+        task_type: TaskType.REPEAT
+      });
+      console.log('✅ Greeting spoken');
+    }
     
     if (isVoiceChat) {
       console.log('🎤 Starting voice chat...');
