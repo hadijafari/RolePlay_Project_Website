@@ -21,6 +21,14 @@
         .field label { display: block; margin-bottom: 6px; color: #ccc; }
         .field input, .field select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #1a1a1a; color: #fff; }
         .badge { background: #222; border: 1px solid #444; color: #ddd; padding: 6px 10px; border-radius: 999px; }
+        .transcript-panel { margin-top: 16px; background: #111; border: 1px solid #333; border-radius: 12px; padding: 16px; max-height: 400px; overflow-y: auto; }
+        .transcript-title { color: #fff; font-weight: bold; margin-bottom: 12px; font-size: 16px; }
+        .message { margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
+        .message.user { background: #2563eb; color: #fff; margin-left: auto; text-align: right; }
+        .message.avatar { background: #2d2d2d; color: #ddd; margin-right: auto; }
+        .message-time { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+        .message-typing { opacity: 0.6; font-style: italic; }
+        .no-messages { color: #666; text-align: center; padding: 20px; font-style: italic; }
     </style>
     <script type="importmap">
     {
@@ -83,6 +91,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Transcript Panel -->
+        <div class="card transcript-panel" id="transcriptPanel" style="display: none;">
+            <div class="transcript-title">Conversation Transcript</div>
+            <div id="messageContainer">
+                <div class="no-messages">Start a conversation to see the transcript...</div>
             </div>
         </div>
 

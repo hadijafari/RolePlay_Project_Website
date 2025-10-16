@@ -15,6 +15,8 @@ const state = {
   stream: null,
   connected: false,
   isVoiceChatActive: false,
+  currentUserMessage: '',
+  currentAvatarMessage: '',
 };
 
 const els = {
@@ -29,6 +31,8 @@ const els = {
   language: document.getElementById('language'),
   voiceRate: document.getElementById('voiceRate'),
   systemPrompt: document.getElementById('systemPrompt'),
+  transcriptPanel: document.getElementById('transcriptPanel'),
+  messageContainer: document.getElementById('messageContainer'),
 };
 
 function setConnected(connected) {
@@ -37,6 +41,60 @@ function setConnected(connected) {
   els.stop.disabled = !connected;
   els.mute.disabled = !connected;
   els.unmute.disabled = !connected;
+  
+  // Show/hide transcript panel
+  if (connected) {
+    els.transcriptPanel.style.display = 'block';
+  }
+}
+
+function clearTranscript() {
+  els.messageContainer.innerHTML = '<div class="no-messages">Start a conversation to see the transcript...</div>';
+  els.transcriptPanel.style.display = 'none';
+  state.currentUserMessage = '';
+  state.currentAvatarMessage = '';
+}
+
+function addMessage(sender, text, isFinal = true) {
+  // Remove "no messages" placeholder
+  const noMessages = els.messageContainer.querySelector('.no-messages');
+  if (noMessages) {
+    noMessages.remove();
+  }
+
+  const messageClass = sender === 'user' ? 'user' : 'avatar';
+  const timestamp = new Date().toLocaleTimeString();
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${messageClass}`;
+  messageDiv.innerHTML = `
+    <div>${text}</div>
+    <div class="message-time">${timestamp}</div>
+  `;
+
+  els.messageContainer.appendChild(messageDiv);
+  
+  // Auto-scroll to bottom
+  els.messageContainer.scrollTop = els.messageContainer.scrollHeight;
+  
+  console.log(`💬 Added ${sender} message:`, text);
+}
+
+function updateLastMessage(sender, text) {
+  const messages = els.messageContainer.querySelectorAll('.message');
+  const lastMessage = messages[messages.length - 1];
+  
+  if (lastMessage && lastMessage.classList.contains(sender)) {
+    const textDiv = lastMessage.querySelector('div:first-child');
+    if (textDiv) {
+      textDiv.textContent = text;
+    }
+    // Auto-scroll to bottom
+    els.messageContainer.scrollTop = els.messageContainer.scrollHeight;
+  } else {
+    // No existing message to update, create new one
+    addMessage(sender, text, false);
+  }
 }
 
 async function fetchAccessToken() {
@@ -73,6 +131,54 @@ function attachCommonEvents(avatar) {
 
   avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
     console.log('🤐 Avatar stopped talking');
+  });
+
+  // Transcript events - User messages
+  avatar.on(StreamingEvents.USER_START, () => {
+    console.log('👤 User started speaking');
+    state.currentUserMessage = '';
+    // Create initial empty message for user
+    addMessage('user', '', false);
+  });
+
+  avatar.on(StreamingEvents.USER_TALKING_MESSAGE, (event) => {
+    console.log('👤 User talking:', event);
+    const text = event.detail?.message || event.message || '';
+    if (text) {
+      // Accumulate the user's message
+      state.currentUserMessage += (state.currentUserMessage ? ' ' : '') + text;
+      updateLastMessage('user', state.currentUserMessage);
+    }
+  });
+
+  avatar.on(StreamingEvents.USER_END_MESSAGE, (event) => {
+    console.log('👤 User message ended:', event);
+    // Just finalize the accumulated message, don't add a new one
+    state.currentUserMessage = '';
+  });
+
+  // Transcript events - Avatar messages
+  avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
+    console.log('🗣️ Avatar started talking');
+    state.currentAvatarMessage = '';
+    // Create initial empty message for avatar
+    addMessage('avatar', '', false);
+  });
+
+  avatar.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (event) => {
+    console.log('🤖 Avatar talking:', event);
+    const text = event.detail?.message || event.message || '';
+    if (text) {
+      // Accumulate the avatar's message
+      state.currentAvatarMessage += (state.currentAvatarMessage ? ' ' : '') + text;
+      updateLastMessage('avatar', state.currentAvatarMessage);
+    }
+  });
+
+  avatar.on(StreamingEvents.AVATAR_END_MESSAGE, (event) => {
+    console.log('🤖 Avatar message ended:', event);
+    // Just finalize the accumulated message, don't add a new one
+    state.currentAvatarMessage = '';
   });
 }
 
@@ -144,6 +250,7 @@ async function stopSession() {
     state.avatar = null;
     state.stream = null;
     els.video.srcObject = null;
+    clearTranscript();
   }
 }
 
