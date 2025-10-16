@@ -17,6 +17,37 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// API endpoint to get a HeyGen Streaming access token
+app.post('/api/heygen/get-access-token', async (req, res) => {
+    try {
+        const heygenApiKey = process.env.HEYGEN_API_KEY;
+        if (!heygenApiKey) {
+            return res.status(500).send('HEYGEN_API_KEY is missing from .env');
+        }
+
+        const baseApiUrl = process.env.HEYGEN_BASE_API_URL || 'https://api.heygen.com';
+        const fetch = (await import('node-fetch')).default;
+
+        const resp = await fetch(`${baseApiUrl}/v1/streaming.create_token`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': heygenApiKey
+            }
+        });
+
+        if (!resp.ok) {
+            const text = await resp.text();
+            return res.status(502).send(`Failed to retrieve access token: ${text}`);
+        }
+
+        const data = await resp.json();
+        return res.status(200).send(data?.data?.token || '');
+    } catch (error) {
+        console.error('Error retrieving HeyGen access token:', error);
+        return res.status(500).send('Failed to retrieve access token');
+    }
+});
+
 // API endpoint to get the OpenAI API key
 app.get('/api/config', (req, res) => {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -132,6 +163,11 @@ app.get('/login', (req, res) => {
 // Serve the auth callback page
 app.get('/auth/callback', (req, res) => {
     res.sendFile(path.join(__dirname, 'auth-callback.html'));
+});
+
+// Serve the HeyGen interactive avatar page
+app.get('/heygen', (req, res) => {
+    res.sendFile(path.join(__dirname, 'heygen.html'));
 });
 
 // Start server
